@@ -3,8 +3,8 @@ import time
 import threading
 import MetaTrader5 as mt5
 from Entry_Super_XAU import get_final_trend_XAU  # Hàm lấy xu hướng
-from TPO_POC import calculate_poc_value_XAU  # Hàm tính POC
-from place_order import place_order_mt5  # Hàm thực hiện lệnh giao dịch
+from TPO_POC_XAU import calculate_poc_value_XAU  # Hàm tính POC
+from place_order_XAU import place_order_mt5  # Hàm thực hiện lệnh giao dịch
 
 # Khởi tạo ứng dụng Flask
 app = Flask(__name__)
@@ -100,7 +100,7 @@ def get_trend():
     return trend
 
 # Kiểm tra giá POC và thực hiện lệnh
-def check_poc_and_place_order(final_trend, symbol="XAUUSD"):  
+def check_poc_and_place_order(final_trend, symbol="XAUUSD"):
     position = get_position_info()
     if position:
         print("Đã có một vị thế mở. Theo dõi vị thế hiện tại và không mở thêm lệnh.")
@@ -111,23 +111,25 @@ def check_poc_and_place_order(final_trend, symbol="XAUUSD"):
     if mark_price is None:
         return
 
-    poc_value = calculate_poc_value_XAU()  # Chắc chắn rằng `calculate_poc_value` có thể làm việc với XAUUSD
+    poc_value = calculate_poc_value_XAU()
     price_difference_percent = abs((poc_value - mark_price) / mark_price) * 100
-    print(f"Chênh lệch giữa POC và mark price: {price_difference_percent:.2f}%")
+    print(f"[DEBUG] POC: {poc_value}, Giá thị trường: {mark_price}, Chênh lệch (%): {price_difference_percent:.2f}")
 
-    if price_difference_percent <= 0.25:
+    if price_difference_percent <= 0.2:
         if final_trend == "Xu hướng tăng":
-            print("Xu hướng tăng. POC value gần mark price. Thực hiện lệnh mua.")
-            place_order_mt5("buy", symbol, risk_amount=RISK_AMOUNT)
+            print("[DEBUG] Xu hướng tăng. Gọi trực tiếp place_order_mt5 với lệnh mặc định Buy.")
+            # Gọi place_order_mt5 với logic mặc định Buy
+            place_order_mt5(None, order_type="buy", symbol=symbol, risk_amount=RISK_AMOUNT)
         elif final_trend == "Xu hướng giảm":
-            print("Xu hướng giảm. POC value gần mark price. Thực hiện lệnh bán.")
-            place_order_mt5("sell", symbol, risk_amount=RISK_AMOUNT)
+            print("[DEBUG] Xu hướng giảm. Thực hiện lệnh Sell.")
+            place_order_mt5(None, order_type="sell", symbol=symbol, risk_amount=RISK_AMOUNT)
     else:
-        print("Không thực hiện lệnh vì chênh lệch vượt quá 0.25%.")
+        print("[DEBUG] Không thực hiện lệnh vì chênh lệch vượt quá 0.2%.")
+
 
 # Hàm đóng lệnh
 def close_position(position):
-    order_type = mt5.ORDER_TYPE_SELL if position["type"] == "Buy" else mt5.ORDER_TYPE_BUY
+    order_type = mt5.ORDER_TYPE_SELL if position["type"] == "buy" else mt5.ORDER_TYPE_BUY
     
     # Tạo yêu cầu đóng lệnh với chế độ IOC
     close_request = {
